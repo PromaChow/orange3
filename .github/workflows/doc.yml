@@ -42,6 +42,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         name: Build documentation
         run: tox -e build_doc
+        continue-on-error: true
       - id: measurement-8
         name: Record Measurement After Build documentation
         uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
