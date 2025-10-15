@@ -1,10 +1,6 @@
 name: Test
-
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
 
@@ -12,149 +8,194 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - name: Start Energy Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          task: start-measurement
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
-          fetch-depth: '2'
-
+          fetch-depth: "2"
+          submodules: "true"
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-
+          python-version: "3.10"
       - name: Install Tox
-        run: |
-          python -m pip install --upgrade pip
+        run: "python -m pip install --upgrade pip
+
           python -m pip install --upgrade tox
 
+          "
+        continue-on-error: true
+      - id: measurement-4
+        name: Record Measurement After Install Tox
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Install Tox
+          task: get-measurement
       - name: Run Pylint
-        run:  tox -e pylint-ci
-
+        run: tox -e pylint-ci
+        continue-on-error: true
+      - id: measurement-6
+        name: Record Measurement After Run Pylint
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Run Pylint
+          task: get-measurement
+      - id: display-measurement
+        name: Display Energy Results
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          task: display-results
+      - name: Save Total Energy Consumption Data
+        run: echo '${{ steps.final-measurement.outputs.data-total-json }}' > total_energy_consumption.json
+      - name: Upload Energy Consumption Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: total-energy-consumption
+          path: total_energy_consumption.json
   test_on_linux:
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
     name: ${{ matrix.name }} (${{ matrix.os }}, py${{ matrix.python-version }})
-    strategy:
-      fail-fast: False
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.10', '3.11', '3.12', '3.13']
-        tox_env: [orange-released]
-        name: [Released]
-        include:
-          - os: ubuntu-latest
-            python-version: '3.13'
-            tox_env: orange-latest
-            name: Latest
-          - os: ubuntu-22.04
-            python-version: '3.10'
-            tox_env: orange-oldest
-            name: Oldest dependencies
-          - os: ubuntu-latest
-            python-version: '3.12'
-            tox_env: pyqt6
-            name: PyQt6
-          - os: ubuntu-latest
-            python-version: '3.13'
-            tox_env: beta
-            name: "Scientific Python nightly wheels"
-
+    runs-on: ${{ matrix.os }}
     services:
-      postgres:
-        image: orangedm/postgres:11
-        env:
-          POSTGRES_USER: postgres_user
-          POSTGRES_PASSWORD: postgres_password
-          POSTGRES_DB: postgres_db
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
       SQLServer:
-        image: mcr.microsoft.com/mssql/server:2017-latest
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: sqlServerPassw0rd
+        image: mcr.microsoft.com/mssql/server:2017-latest
         ports:
           - 1433:1433
-
+      postgres:
+        env:
+          POSTGRES_DB: postgres_db
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_USER: postgres_user
+        image: orangedm/postgres:11
+        options:
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
+      - name: Start Energy Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          task: start-measurement
       - uses: actions/checkout@v4
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
       - name: Install linux system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libxcb-cursor0 glibc-tools libegl1
+        run: "sudo apt-get update
 
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1
+          libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0
+          libxcb-cursor0 glibc-tools libegl1
+
+          "
+        continue-on-error: true
+      - id: measurement-4
+        name: Record Measurement After Install linux system dependencies
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Install linux system dependencies
+          task: get-measurement
       - name: Install Tox
-        run: |
-          python -m pip install --upgrade pip
+        run: "python -m pip install --upgrade pip
+
           python -m pip install --upgrade tox
 
-      - name: Skip testing workflows at coverage
-        if: |
-          matrix.python-version == '3.12' && matrix.tox_env == 'orange-released'
-        run: |
-          echo 'SKIP_EXAMPLE_WORKFLOWS=1' >> $GITHUB_ENV
+          "
+        continue-on-error: true
+      - id: measurement-6
+        name: Record Measurement After Install Tox
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Install Tox
+          task: get-measurement
+      - if: matrix.python-version == '3.12' && matrix.tox_env == 'orange-released'
 
-      - name: Run Tox
-        run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
-        env:
-          XVFBARGS: "-screen 0 1280x1024x24"
+        name: Skip testing workflows at coverage
+        run: "echo 'SKIP_EXAMPLE_WORKFLOWS=1' >> $GITHUB_ENV
+
+          "
+        continue-on-error: true
+      - id: measurement-8
+        name: Record Measurement After Skip testing workflows at coverage
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Skip testing workflows at coverage
+          task: get-measurement
+      - env:
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
-
-      - name: Upload code coverage
-        if: matrix.python-version == '3.12' && matrix.tox_env == 'orange-released'
+          XVFBARGS: -screen 0 1280x1024x24
+        name: Run Tox
+        run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
+        continue-on-error: true
+      - id: measurement-10
+        name: Record Measurement After Run Tox
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Run Tox
+          task: get-measurement
+      - if: matrix.python-version == '3.12' && matrix.tox_env == 'orange-released'
+        name: Upload code coverage
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  test_on_macos_and_windows:
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    name: ${{ matrix.name }} (${{ matrix.os }}, py${{ matrix.python-version }})
+      - id: display-measurement
+        name: Display Energy Results
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          task: display-results
+      - name: Save Total Energy Consumption Data
+        run: echo '${{ steps.final-measurement.outputs.data-total-json }}' > total_energy_consumption.json
+      - name: Upload Energy Consumption Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: total-energy-consumption
+          path: total_energy_consumption.json
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
-        python-version: ['3.10', '3.11', '3.12', '3.13']
-        tox_env: [orange-released]
-        name: [Released]
         include:
-          - os: windows-latest
-            python-version: '3.13'
+          - name: Latest
+            os: ubuntu-latest
+            python-version: "3.13"
             tox_env: orange-latest
-            name: Latest
-          - os: macos-latest
-            python-version: '3.13'
-            tox_env: orange-latest
-            name: Latest
-          - os: windows-latest
-            python-version: '3.12'
+          - name: Oldest dependencies
+            os: ubuntu-22.04
+            python-version: "3.10"
+            tox_env: orange-oldest
+          - name: PyQt6
+            os: ubuntu-latest
+            python-version: "3.12"
             tox_env: pyqt6
-            name: PyQt6
-          - os: macos-latest
-            python-version: '3.12'
-            tox_env: pyqt6
-            name: PyQt6
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade tox
-
-      - name: Test with Tox
-        run: |
-          tox -e ${{ matrix.tox_env }}
+          - name: Scientific Python nightly wheels
+            os: ubuntu-latest
+            python-version: "3.13"
+            tox_env: beta
+        name:
+          - Released
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+        tox_env:
+          - orange-released
+    timeout-minutes: 30

@@ -1,38 +1,71 @@
 name: Documentation workflow
-
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: False
-      matrix:
-        python: ['3.10']
-        os: [ubuntu-22.04]
-
     steps:
+      - name: Start Energy Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          task: start-measurement
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-
       - name: Install linux system dependencies
         run: sudo apt-get install -y libxkbcommon-x11-0
-
+      - id: measurement-4
+        name: Record Measurement After Install linux system dependencies
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Install linux system dependencies
+          task: get-measurement
       - name: Install Tox
         run: pip install tox
-
-      - name: Build documentation
-        run: tox -e build_doc
-        env:
+      - id: measurement-6
+        name: Record Measurement After Install Tox
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Install Tox
+          task: get-measurement
+      - env:
           QT_QPA_PLATFORM: offscreen
+        name: Build documentation
+        run: tox -e build_doc
+      - id: measurement-8
+        name: Record Measurement After Build documentation
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          label: Build documentation
+          task: get-measurement
+      - id: display-measurement
+        name: Display Energy Results
+        uses: green-coding-solutions/eco-ci-energy-estimation@862050e4f01f65b1436e5eca18ba4bd85562f0de
+        with:
+          json-output: true
+          task: display-results
+      - name: Save Total Energy Consumption Data
+        run: echo '${{ steps.final-measurement.outputs.data-total-json }}' > total_energy_consumption.json
+      - name: Upload Energy Consumption Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: total-energy-consumption
+          path: total_energy_consumption.json
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04
+        python:
+          - "3.10"
